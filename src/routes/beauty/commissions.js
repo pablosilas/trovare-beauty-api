@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { list, togglePaid } from "../controllers/commissions.js";
+import { list, togglePaid } from "../../controllers/commissions.js";
 
 const router = Router();
 

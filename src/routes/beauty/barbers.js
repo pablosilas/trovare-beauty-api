@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { list, create, remove } from "../controllers/transactions.js";
+import { list, create, update, remove } from "../../controllers/barbers.js";
 
 const router = Router();
 
 router.get("/", list);
 router.post("/", create);
+router.put("/:id", update);
 router.delete("/:id", remove);
 
 export default router;

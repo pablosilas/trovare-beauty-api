@@ -7,17 +7,23 @@ datasource db {
 }
 
 model Tenant {
-  id        Int      @id @default(autoincrement())
-  name      String
-  slug      String   @unique
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  users     User[]
-  barbers   Barber[]
-  clients   Client[]
-  bookings  Booking[]
-  commissions Commission[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  slug         String        @unique
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  users        User[]
+  barbers      Barber[]
+  clients      Client[]
+  bookings     Booking[]
+  commissions  Commission[]
   transactions Transaction[]
+  mesas        Mesa[]
+  categorias   Categoria[]
+  itens        Item[]
+  garcons      Garcom[]
+  pedidos      Pedido[]
+  pedidosIfood PedidoIfood[]
 }
 
 model User {
@@ -29,6 +35,105 @@ model User {
   role      String   @default("admin")
   createdAt DateTime @default(now())
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Mesa {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  numero    Int
+  capacidade Int     @default(4)
+  status    String   @default("livre")
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  pedidos   Pedido[]
+}
+
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  nome      String
+  ordem     Int      @default(0)
+  ativa     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  itens     Item[]
+}
+
+model Item {
+  id          Int        @id @default(autoincrement())
+  tenantId    Int
+  categoriaId Int
+  nome        String
+  descricao   String     @default("")
+  preco       Float
+  disponivel  Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+  itensPedido ItemPedido[]
+}
+
+model Garcom {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  nome          String
+  phone         String   @default("")
+  commissionPct Float    @default(10)
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  pedidos       Pedido[]
+}
+
+model Pedido {
+  id          Int          @id @default(autoincrement())
+  tenantId    Int
+  mesaId      Int?
+  garcomId    Int?
+  origem      String       @default("local")
+  status      String       @default("aberto")
+  total       Float        @default(0)
+  createdAt   DateTime     @default(now())
+  fechadoAt   DateTime?
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  mesa        Mesa?        @relation(fields: [mesaId], references: [id])
+  garcom      Garcom?      @relation(fields: [garcomId], references: [id])
+  itens       ItemPedido[]
+  pagamento   PagamentoFood?
+}
+
+model ItemPedido {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int
+  itemId    Int
+  quantidade Int     @default(1)
+  preco     Float
+  obs       String   @default("")
+  createdAt DateTime @default(now())
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id])
+  item      Item     @relation(fields: [itemId], references: [id])
+}
+
+model PagamentoFood {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int      @unique
+  forma     String
+  total     Float
+  createdAt DateTime @default(now())
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id])
+}
+
+model PedidoIfood {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  ifoodId      String   @unique
+  status       String
+  total        Float
+  itens        Json
+  cliente      Json
+  createdAt    DateTime @default(now())
+  atualizadoAt DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 model Barber {
