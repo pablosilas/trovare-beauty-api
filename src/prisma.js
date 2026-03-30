@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 
 const connectionString = process.env.DATABASE_URL;
 const adapter = new PrismaPg({ connectionString });
@@ -12,4 +13,4 @@ export const booking = prisma.booking;
 export const commission = prisma.commission;
 export const transaction = prisma.transaction;
 
-export default prisma; // ← essa linha precisa estar aqui
+export default prisma;
