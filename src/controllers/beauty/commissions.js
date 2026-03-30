@@ -1,4 +1,4 @@
-import { commission } from "../prisma.js";
+import { commission } from "../../prisma.js";
 
 export async function list(req, res) {
   try {

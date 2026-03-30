@@ -1,4 +1,4 @@
-import { barber } from "../prisma.js";
+import { barber } from "../../prisma.js";
 
 export async function list(req, res) {
   try {

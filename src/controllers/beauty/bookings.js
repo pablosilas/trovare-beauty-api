@@ -1,4 +1,4 @@
-import prisma, { booking, barber as barberModel } from "../prisma.js";
+import prisma, { booking, barber as barberModel } from "../../prisma.js";
 
 export async function list(req, res) {
   try {

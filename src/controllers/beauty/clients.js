@@ -1,4 +1,4 @@
-import { client } from "../prisma.js";
+import { client } from "../../prisma.js";
 
 export async function list(req, res) {
   try {

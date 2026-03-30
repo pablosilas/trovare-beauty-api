@@ -1,4 +1,4 @@
-import { transaction } from "../prisma.js";
+import { transaction } from "../../prisma.js";
 
 export async function list(req, res) {
   try {

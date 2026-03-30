@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { list, create, remove } from "../../controllers/transactions.js";
+import { list, create, remove } from "../../controllers/beauty/transactions.js";
 
 const router = Router();
 
