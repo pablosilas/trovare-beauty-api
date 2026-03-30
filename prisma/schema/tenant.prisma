@@ -1,0 +1,30 @@
+model Tenant {
+  id           Int           @id @default(autoincrement())
+  name         String
+  slug         String        @unique
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  users        User[]
+  barbers      Barber[]
+  clients      Client[]
+  bookings     Booking[]
+  commissions  Commission[]
+  transactions Transaction[]
+  mesas        Mesa[]
+  categorias   Categoria[]
+  itens        Item[]
+  garcons      Garcom[]
+  pedidos      Pedido[]
+  pedidosIfood PedidoIfood[]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}

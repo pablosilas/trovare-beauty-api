@@ -1,0 +1,74 @@
+model Barber {
+  id            Int          @id @default(autoincrement())
+  tenantId      Int
+  name          String
+  phone         String
+  specialty     String       @default("")
+  commissionPct Float        @default(40)
+  status        String       @default("active")
+  createdAt     DateTime     @default(now())
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  bookings      Booking[]
+  commissions   Commission[]
+}
+
+model Client {
+  id        Int       @id @default(autoincrement())
+  tenantId  Int
+  name      String
+  phone     String
+  email     String    @default("")
+  loyalty   String    @default("Novo")
+  notes     String    @default("")
+  visits    Int       @default(0)
+  spent     Float     @default(0)
+  lastVisit DateTime?
+  createdAt DateTime  @default(now())
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  bookings  Booking[]
+}
+
+model Booking {
+  id         Int         @id @default(autoincrement())
+  tenantId   Int
+  clientId   Int
+  barberId   Int
+  service    String
+  price      Float
+  date       String
+  time       String
+  status     String      @default("confirmed")
+  createdAt  DateTime    @default(now())
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  client     Client      @relation(fields: [clientId], references: [id])
+  barber     Barber      @relation(fields: [barberId], references: [id])
+  commission Commission?
+}
+
+model Commission {
+  id        Int       @id @default(autoincrement())
+  tenantId  Int
+  barberId  Int
+  bookingId Int       @unique
+  amount    Float
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  barber    Barber    @relation(fields: [barberId], references: [id])
+  booking   Booking   @relation(fields: [bookingId], references: [id])
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  type        String
+  description String
+  category    String
+  amount      Float
+  date        String
+  payment     String
+  barber      String   @default("")
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+}
