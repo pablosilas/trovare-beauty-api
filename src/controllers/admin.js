@@ -16,26 +16,24 @@ export async function listTenants(req, res) {
 
 export async function createTenant(req, res) {
   try {
-    const { tenantName, slug, adminName, adminEmail, adminPassword } = req.body;
+    const { tenantName, slug, adminName, adminEmail, adminPassword, product } = req.body;
 
     if (!tenantName || !slug || !adminEmail || !adminPassword) {
       return res.status(400).json({ error: "Preencha todos os campos obrigatórios" });
     }
 
-    // Verifica se slug já existe
     const existing = await prisma.tenant.findUnique({ where: { slug } });
     if (existing) {
       return res.status(400).json({ error: "Slug já está em uso" });
     }
 
-    // Verifica se email já existe
     const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
     if (existingUser) {
       return res.status(400).json({ error: "E-mail já está em uso" });
     }
 
     const tenant = await prisma.tenant.create({
-      data: { name: tenantName, slug },
+      data: { name: tenantName, slug, product: product || "beauty" },
     });
 
     const hashed = await bcrypt.hash(adminPassword, 10);
@@ -65,7 +63,7 @@ export async function toggleTenant(req, res) {
     });
 
     if (!tenant) {
-      return res.status(404).json({ error: "Barbearia não encontrada" });
+      return res.status(404).json({ error: "Cliente não encontrado" });
     }
 
     const updated = await prisma.tenant.update({

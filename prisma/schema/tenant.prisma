@@ -2,6 +2,7 @@ model Tenant {
   id           Int           @id @default(autoincrement())
   name         String
   slug         String        @unique
+  product      String        @default("beauty") // beauty | food | all
   active       Boolean       @default(true)
   createdAt    DateTime      @default(now())
   users        User[]
