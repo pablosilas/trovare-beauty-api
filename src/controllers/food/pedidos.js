@@ -1,4 +1,5 @@
 import prisma from "../../prisma.js";
+import { emitToTenant } from "../../socket.js";
 
 export async function list(req, res) {
   try {
@@ -47,6 +48,9 @@ export async function create(req, res) {
       });
     }
 
+    // Emite evento para a cozinha e food
+    emitToTenant(req.tenantId, "pedido:novo", pedido);
+
     res.status(201).json(pedido);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -69,7 +73,6 @@ export async function addItem(req, res) {
       include: { item: true },
     });
 
-    // Atualiza total do pedido
     const total = await prisma.itemPedido.aggregate({
       where: { pedidoId: Number(req.params.id) },
       _sum: { preco: true },
@@ -77,8 +80,16 @@ export async function addItem(req, res) {
 
     await prisma.pedido.update({
       where: { id: Number(req.params.id) },
-      data: { total: (total._sum.preco || 0) },
+      data: { total: total._sum.preco || 0 },
     });
+
+    // Busca pedido atualizado e emite
+    const pedidoAtualizado = await prisma.pedido.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
+    });
+
+    emitToTenant(req.tenantId, "pedido:atualizado", pedidoAtualizado);
 
     res.status(201).json(itemPedido);
   } catch (e) {
@@ -102,6 +113,13 @@ export async function removeItem(req, res) {
       data: { total: total._sum.preco || 0 },
     });
 
+    const pedidoAtualizado = await prisma.pedido.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
+    });
+
+    emitToTenant(req.tenantId, "pedido:atualizado", pedidoAtualizado);
+
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -116,6 +134,10 @@ export async function updateStatus(req, res) {
       data: { status },
       include: { mesa: true, garcom: true, itens: { include: { item: true } } },
     });
+
+    // Emite status atualizado
+    emitToTenant(req.tenantId, "pedido:status", pedido);
+
     res.json(pedido);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -141,6 +163,7 @@ export async function fechar(req, res) {
     const pedidoFechado = await prisma.pedido.update({
       where: { id: pedido.id },
       data: { status: "fechado", fechadoAt: new Date() },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
     });
 
     if (pedido.mesaId) {
@@ -149,6 +172,8 @@ export async function fechar(req, res) {
         data: { status: "livre" },
       });
     }
+
+    emitToTenant(req.tenantId, "pedido:fechado", pedidoFechado);
 
     res.json(pedidoFechado);
   } catch (e) {
