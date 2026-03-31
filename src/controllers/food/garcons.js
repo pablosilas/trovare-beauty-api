@@ -153,3 +153,21 @@ export async function resetPassword(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function getLogin(req, res) {
+  try {
+    const garcom = await prisma.garcom.findUnique({
+      where: { id: Number(req.params.id), tenantId: req.tenantId },
+      select: { id: true, nome: true, username: true },
+    });
+
+    if (!garcom) {
+      return res.status(404).json({ error: "Garçom não encontrado" });
+    }
+
+    // Retorna só o username — senha não fica salva em texto puro
+    res.json({ username: garcom.username });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
