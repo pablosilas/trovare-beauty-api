@@ -28,7 +28,6 @@ export async function resetKitchenPassword(req, res) {
       return res.status(404).json({ error: "Usuário da cozinha não encontrado" });
     }
 
-    // Gera nova senha aleatória
     const plainPassword = `kitchen${Math.floor(1000 + Math.random() * 9000)}`;
     const hashed = await bcrypt.hash(plainPassword, 10);
 
@@ -38,6 +37,32 @@ export async function resetKitchenPassword(req, res) {
     });
 
     res.json({ email: kitchen.email, plainPassword });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function getConfig(req, res) {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.tenantId },
+      select: { garcomModo: true, name: true },
+    });
+    res.json(tenant);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+export async function updateConfig(req, res) {
+  try {
+    const { garcomModo } = req.body;
+    const tenant = await prisma.tenant.update({
+      where: { id: req.tenantId },
+      data: { garcomModo },
+      select: { garcomModo: true, name: true },
+    });
+    res.json(tenant);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

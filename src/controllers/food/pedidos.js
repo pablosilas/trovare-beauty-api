@@ -3,11 +3,25 @@ import { emitToTenant } from "../../socket.js";
 
 export async function list(req, res) {
   try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.tenantId },
+      select: { garcomModo: true },
+    });
+
+    // Se modo fixo E for garçom → filtra só os pedidos dele
+    const where = {
+      tenantId: req.tenantId,
+      ...(tenant.garcomModo === "fixo" && req.garcomId
+        ? { garcomId: req.garcomId }
+        : {}),
+    };
+
     const pedidos = await prisma.pedido.findMany({
-      where: { tenantId: req.tenantId },
+      where,
       include: { mesa: true, garcom: true, itens: { include: { item: true } } },
       orderBy: { createdAt: "desc" },
     });
+
     res.json(pedidos);
   } catch (e) {
     res.status(500).json({ error: e.message });
