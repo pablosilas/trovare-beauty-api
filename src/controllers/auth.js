@@ -7,34 +7,24 @@ export async function login(req, res) {
   try {
     const { email, password, product } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email e senha obrigatórios" });
-    }
-
     const user = await prisma.user.findUnique({
       where: { email },
       include: { tenant: true },
     });
 
-    if (!user) {
-      return res.status(401).json({ error: "Credenciais inválidas" });
-    }
+    if (!user) return res.status(401).json({ error: "Credenciais inválidas" });
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: "Credenciais inválidas" });
-    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: "Credenciais inválidas" });
 
-    if (!user.tenant.active) {
-      return res.status(403).json({ error: "Conta inativa" });
-    }
+    if (!user.tenant.active) return res.status(403).json({ error: "Conta inativa" });
 
     if (product && user.tenant.product !== "all" && user.tenant.product !== product) {
       return res.status(403).json({ error: "Sua conta não tem acesso a este produto" });
     }
 
     const token = jwt.sign(
-      { userId: user.id, tenantId: user.tenantId },
+      { userId: user.id, tenantId: user.tenantId, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );

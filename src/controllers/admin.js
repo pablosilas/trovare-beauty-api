@@ -18,20 +18,6 @@ export async function createTenant(req, res) {
   try {
     const { tenantName, slug, adminName, adminEmail, adminPassword, product } = req.body;
 
-    if (!tenantName || !slug || !adminEmail || !adminPassword) {
-      return res.status(400).json({ error: "Preencha todos os campos obrigatórios" });
-    }
-
-    const existing = await prisma.tenant.findUnique({ where: { slug } });
-    if (existing) {
-      return res.status(400).json({ error: "Slug já está em uso" });
-    }
-
-    const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
-    if (existingUser) {
-      return res.status(400).json({ error: "E-mail já está em uso" });
-    }
-
     const tenant = await prisma.tenant.create({
       data: { name: tenantName, slug, product: product || "beauty" },
     });
@@ -47,9 +33,33 @@ export async function createTenant(req, res) {
       },
     });
 
+    // Se for food ou all, cria login da cozinha automaticamente
+    let kitchen = null;
+    if (["food", "all"].includes(product)) {
+      const kitchenEmail = `kitchen.${slug}@trovare.internal`;
+      const kitchenPassword = `kitchen${Math.floor(1000 + Math.random() * 9000)}`;
+      const kitchenHashed = await bcrypt.hash(kitchenPassword, 10);
+
+      kitchen = await prisma.user.create({
+        data: {
+          tenantId: tenant.id,
+          name: "Cozinha",
+          email: kitchenEmail,
+          password: kitchenHashed,
+          role: "kitchen",
+        },
+      });
+
+      kitchen.plainPassword = kitchenPassword;
+    }
+
     res.status(201).json({
       tenant,
       user: { id: user.id, name: user.name, email: user.email },
+      kitchen: kitchen ? {
+        email: kitchen.email,
+        plainPassword: kitchen.plainPassword,
+      } : null,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
