@@ -7,17 +7,21 @@ export async function resumo(req, res) {
 
     const pedidosHoje = await prisma.pedido.findMany({
       where: {
-        tenantId: req.tenantId,
-        status: "fechado",
+        tenantId:  req.tenantId,
+        status:    "fechado",
         fechadoAt: { gte: hoje },
       },
       include: { pagamento: true, garcom: true },
     });
 
     const totalHoje = pedidosHoje.reduce((s, p) => s + p.total, 0);
-    const totalDinheiro = pedidosHoje.filter(p => p.pagamento?.forma === "dinheiro").reduce((s, p) => s + p.total, 0);
-    const totalCartao = pedidosHoje.filter(p => p.pagamento?.forma === "cartao").reduce((s, p) => s + p.total, 0);
-    const totalPix = pedidosHoje.filter(p => p.pagamento?.forma === "pix").reduce((s, p) => s + p.total, 0);
+
+    // Agrupa por forma de pagamento dinamicamente
+    const porForma = {};
+    pedidosHoje.forEach(p => {
+      const forma = p.pagamento?.forma || "outros";
+      porForma[forma] = (porForma[forma] || 0) + p.total;
+    });
 
     const mesasAtivas = await prisma.mesa.count({
       where: { tenantId: req.tenantId, status: "ocupada" },
@@ -25,11 +29,13 @@ export async function resumo(req, res) {
 
     res.json({
       totalHoje,
-      totalDinheiro,
-      totalCartao,
-      totalPix,
       pedidosHoje: pedidosHoje.length,
       mesasAtivas,
+      porForma, // ← objeto dinâmico com todas as formas
+      // Mantém os campos antigos para compatibilidade
+      totalPix:      porForma["pix"]      || 0,
+      totalCartao:   (porForma["credito"] || 0) + (porForma["debito"] || 0),
+      totalDinheiro: porForma["dinheiro"] || 0,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
