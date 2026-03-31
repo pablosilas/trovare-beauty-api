@@ -61,3 +61,37 @@ export async function remove(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function fecharMesa(req, res) {
+  try {
+    // Busca todos os pedidos ativos da mesa
+    const pedidosAtivos = await prisma.pedido.findMany({
+      where: {
+        tenantId: req.tenantId,
+        mesaId: Number(req.params.id),
+        status: { notIn: ["fechado"] },
+      },
+    });
+
+    if (pedidosAtivos.length === 0) {
+      return res.status(400).json({ error: "Nenhum pedido ativo nessa mesa" });
+    }
+
+    // Muda todos para aguardando_pagamento
+    await prisma.pedido.updateMany({
+      where: {
+        tenantId: req.tenantId,
+        mesaId: Number(req.params.id),
+        status: { notIn: ["fechado"] },
+      },
+      data: { status: "aguardando_pagamento" },
+    });
+
+    const { emitToTenant } = await import("../../socket.js");
+    emitToTenant(req.tenantId, "mesa:fechada", { mesaId: Number(req.params.id) });
+
+    res.json({ success: true, pedidos: pedidosAtivos.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
