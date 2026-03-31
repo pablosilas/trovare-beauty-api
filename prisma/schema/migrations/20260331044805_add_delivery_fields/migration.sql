@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Pedido" ADD COLUMN     "endereco" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "frete" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "nomeCliente" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "observacao" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "telefone" TEXT NOT NULL DEFAULT '';

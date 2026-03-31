@@ -51,20 +51,25 @@ model Garcom {
 }
 
 model Pedido {
-  id          Int          @id @default(autoincrement())
-  tenantId    Int
-  mesaId      Int?
-  garcomId    Int?
-  origem      String       @default("local")
-  status      String       @default("aberto")
-  total       Float        @default(0)
-  createdAt   DateTime     @default(now())
-  fechadoAt   DateTime?
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  mesa        Mesa?        @relation(fields: [mesaId], references: [id])
-  garcom      Garcom?      @relation(fields: [garcomId], references: [id])
-  itens       ItemPedido[]
-  pagamento   PagamentoFood?
+  id           Int            @id @default(autoincrement())
+  tenantId     Int
+  mesaId       Int?
+  garcomId     Int?
+  origem       String         @default("local")
+  status       String         @default("aberto")
+  total        Float          @default(0)
+  frete        Float          @default(0)
+  nomeCliente  String         @default("")
+  telefone     String         @default("")
+  endereco     String         @default("")
+  observacao   String         @default("")
+  createdAt    DateTime       @default(now())
+  fechadoAt    DateTime?
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  mesa         Mesa?          @relation(fields: [mesaId], references: [id])
+  garcom       Garcom?        @relation(fields: [garcomId], references: [id])
+  itens        ItemPedido[]
+  pagamento    PagamentoFood?
 }
 
 model ItemPedido {

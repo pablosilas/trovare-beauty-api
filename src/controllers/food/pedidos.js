@@ -31,12 +31,23 @@ export async function get(req, res) {
 
 export async function create(req, res) {
   try {
-    const { mesaId, garcomId } = req.body;
+    const {
+      mesaId, garcomId, origem,
+      nomeCliente, telefone, endereco, observacao, frete,
+    } = req.body;
+
     const pedido = await prisma.pedido.create({
       data: {
         tenantId: req.tenantId,
         mesaId: mesaId ? Number(mesaId) : null,
         garcomId: garcomId ? Number(garcomId) : null,
+        origem: origem || "local",
+        nomeCliente: nomeCliente || "",
+        telefone: telefone || "",
+        endereco: endereco || "",
+        observacao: observacao || "",
+        frete: frete ? Number(frete) : 0,
+        total: frete ? Number(frete) : 0,
       },
       include: { mesa: true, garcom: true, itens: true },
     });
@@ -48,9 +59,7 @@ export async function create(req, res) {
       });
     }
 
-    // Emite evento para a cozinha e food
     emitToTenant(req.tenantId, "pedido:novo", pedido);
-
     res.status(201).json(pedido);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -62,36 +71,38 @@ export async function addItem(req, res) {
     const { itemId, quantidade, obs } = req.body;
     const item = await prisma.item.findUnique({ where: { id: Number(itemId) } });
 
-    const itemPedido = await prisma.itemPedido.create({
+    await prisma.itemPedido.create({
       data: {
         pedidoId: Number(req.params.id),
         itemId: Number(itemId),
         quantidade: Number(quantidade) || 1,
-        preco: item.preco,
+        preco: item.preco * (Number(quantidade) || 1),
         obs: obs || "",
       },
       include: { item: true },
     });
 
-    const total = await prisma.itemPedido.aggregate({
-      where: { pedidoId: Number(req.params.id) },
-      _sum: { preco: true },
+    // Recalcula total — soma itens + frete
+    const pedidoAtual = await prisma.pedido.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { itens: true },
     });
+
+    const totalItens = pedidoAtual.itens.reduce((s, i) => s + i.preco, 0);
+    const total = totalItens + pedidoAtual.frete;
 
     await prisma.pedido.update({
       where: { id: Number(req.params.id) },
-      data: { total: total._sum.preco || 0 },
+      data: { total },
     });
 
-    // Busca pedido atualizado e emite
     const pedidoAtualizado = await prisma.pedido.findUnique({
       where: { id: Number(req.params.id) },
       include: { mesa: true, garcom: true, itens: { include: { item: true } } },
     });
 
     emitToTenant(req.tenantId, "pedido:atualizado", pedidoAtualizado);
-
-    res.status(201).json(itemPedido);
+    res.status(201).json(pedidoAtualizado);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
