@@ -251,3 +251,68 @@ export async function fechar(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function cancelar(req, res) {
+  try {
+    const pedido = await prisma.pedido.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { itens: { include: { item: true } } },
+    });
+
+    if (!pedido || pedido.tenantId !== req.tenantId) {
+      return res.status(404).json({ error: "Pedido não encontrado" });
+    }
+
+    if (pedido.status === "fechado") {
+      return res.status(400).json({ error: "Pedido já fechado não pode ser cancelado" });
+    }
+
+    if (pedido.status === "cancelado") {
+      return res.status(400).json({ error: "Pedido já cancelado" });
+    }
+
+    // Devolve estoque dos itens
+    for (const ip of pedido.itens) {
+      if (ip.item?.temEstoque) {
+        const novoEstoque = ip.item.estoque + ip.quantidade;
+        await prisma.item.update({
+          where: { id: ip.itemId },
+          data: {
+            estoque: novoEstoque,
+            disponivel: true, // reativa o item se estava indisponível
+          },
+        });
+      }
+    }
+
+    // Cancela o pedido
+    const pedidoCancelado = await prisma.pedido.update({
+      where: { id: pedido.id },
+      data: { status: "cancelado" },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
+    });
+
+    // Libera a mesa se não tiver outros pedidos ativos
+    if (pedido.mesaId) {
+      const outrosPedidos = await prisma.pedido.count({
+        where: {
+          mesaId: pedido.mesaId,
+          tenantId: req.tenantId,
+          status: { notIn: ["fechado", "cancelado"] },
+        },
+      });
+
+      if (outrosPedidos === 0) {
+        await prisma.mesa.update({
+          where: { id: pedido.mesaId },
+          data: { status: "livre" },
+        });
+      }
+    }
+
+    emitToTenant(req.tenantId, "pedido:cancelado", pedidoCancelado);
+    res.json(pedidoCancelado);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
