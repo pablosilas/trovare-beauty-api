@@ -70,6 +70,7 @@ model Pedido {
   garcom       Garcom?        @relation(fields: [garcomId], references: [id])
   itens        ItemPedido[]
   pagamento    PagamentoFood?
+  formaPagamento String @default("")
 }
 
 model ItemPedido {

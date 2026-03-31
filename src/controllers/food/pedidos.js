@@ -33,7 +33,8 @@ export async function create(req, res) {
   try {
     const {
       mesaId, garcomId, origem,
-      nomeCliente, telefone, endereco, observacao, frete,
+      nomeCliente, telefone, endereco,
+      observacao, frete, formaPagamento,
     } = req.body;
 
     const pedido = await prisma.pedido.create({
@@ -48,6 +49,7 @@ export async function create(req, res) {
         observacao: observacao || "",
         frete: frete ? Number(frete) : 0,
         total: frete ? Number(frete) : 0,
+        formaPagamento: formaPagamento || "",
       },
       include: { mesa: true, garcom: true, itens: true },
     });
@@ -167,8 +169,11 @@ export async function fechar(req, res) {
       return res.status(404).json({ error: "Pedido não encontrado" });
     }
 
+    const formaPagamento = forma || pedido.formaPagamento || "dinheiro";
+
+
     await prisma.pagamentoFood.create({
-      data: { pedidoId: pedido.id, forma, total: pedido.total },
+      data: { pedidoId: pedido.id, forma: formaPagamento, total: pedido.total },
     });
 
     const pedidoFechado = await prisma.pedido.update({
