@@ -17,6 +17,7 @@ import cardapioRoutes from "./routes/food/cardapio.js";
 import pedidosRoutes from "./routes/food/pedidos.js";
 import garconsRoutes from "./routes/food/garcons.js";
 import caixaFoodRoutes from "./routes/food/caixa.js";
+import configFoodRoutes from "./routes/food/config.js";
 
 import { authMiddleware } from "./middleware/auth.js";
 
@@ -58,6 +59,8 @@ app.use("/food/cardapio", authMiddleware, cardapioRoutes);
 app.use("/food/pedidos", authMiddleware, pedidosRoutes);
 app.use("/food/garcons", authMiddleware, garconsRoutes);
 app.use("/food/caixa", authMiddleware, caixaFoodRoutes);
+app.use("/food/config", authMiddleware, configFoodRoutes);
+
 
 io.on("connection", (socket) => {
   console.log(`🔌 Conectado: ${socket.id}`);
