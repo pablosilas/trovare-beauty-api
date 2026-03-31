@@ -136,10 +136,12 @@ export async function meGarcom(req, res) {
   try {
     const garcom = await prisma.garcom.findUnique({
       where: { id: req.garcomId },
-      include: { tenant: true },
       select: {
-        id: true, nome: true, username: true,
-        commissionPct: true, status: true,
+        id: true,
+        nome: true,
+        username: true,
+        commissionPct: true,
+        status: true,
         tenant: { select: { id: true, name: true } },
       },
     });
