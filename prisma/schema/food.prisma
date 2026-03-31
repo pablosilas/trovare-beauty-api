@@ -42,6 +42,7 @@ model Garcom {
   username      String   @unique
   password      String
   phone         String   @default("")
+  dataNascimento DateTime?
   commissionPct Float    @default(10)
   status        String   @default("active")
   createdAt     DateTime @default(now())

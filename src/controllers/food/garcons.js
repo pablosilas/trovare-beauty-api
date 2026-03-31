@@ -2,20 +2,31 @@ import bcrypt from "bcryptjs";
 import prisma from "../../prisma.js";
 
 function generateUsername(nome) {
-  const base = nome.toLowerCase()
+  return nome.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 10);
-  return base;
 }
 
-function generatePassword(nome) {
-  const base = nome.toLowerCase()
+function generatePassword(nome, dataNascimento) {
+  const primeiroNome = nome.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z]/g, "")
-    .slice(0, 4);
+    .split("")[0] === undefined ? nome : nome.split(" ")[0]
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z]/g, "");
+
+  if (dataNascimento) {
+    const data = new Date(dataNascimento);
+    const dia = String(data.getDate()).padStart(2, "0");
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    return `${primeiroNome}${dia}${mes}`;
+  }
+
+  // Fallback sem data de nascimento
   const nums = Math.floor(1000 + Math.random() * 9000);
-  return `${base}${nums}`;
+  return `${primeiroNome}${nums}`;
 }
 
 export async function list(req, res) {
@@ -26,6 +37,7 @@ export async function list(req, res) {
       select: {
         id: true, tenantId: true, nome: true,
         username: true, phone: true,
+        dataNascimento: true,
         commissionPct: true, status: true, createdAt: true,
       },
     });
@@ -37,10 +49,10 @@ export async function list(req, res) {
 
 export async function create(req, res) {
   try {
-    const { nome, phone, commissionPct } = req.body;
+    const { nome, phone, commissionPct, dataNascimento } = req.body;
 
     const username = generateUsername(nome);
-    const plainPass = generatePassword(nome);
+    const plainPass = generatePassword(nome, dataNascimento);
     const hashed = await bcrypt.hash(plainPass, 10);
 
     const existing = await prisma.garcom.findUnique({ where: { username } });
@@ -55,9 +67,9 @@ export async function create(req, res) {
         username: finalUsername,
         password: hashed,
         phone: phone || "",
+        dataNascimento: dataNascimento ? new Date(dataNascimento) : null,
         commissionPct: Number(commissionPct) || 10,
       },
-      // ← sem select, retorna tudo
     });
 
     res.status(201).json({
@@ -65,10 +77,11 @@ export async function create(req, res) {
       nome: garcom.nome,
       username: garcom.username,
       phone: garcom.phone,
+      dataNascimento: garcom.dataNascimento,
       commissionPct: garcom.commissionPct,
       status: garcom.status,
       createdAt: garcom.createdAt,
-      plainPassword: plainPass, // ← senha em texto puro só aqui
+      plainPassword: plainPass,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -77,13 +90,19 @@ export async function create(req, res) {
 
 export async function update(req, res) {
   try {
-    const { nome, phone, commissionPct, status } = req.body;
+    const { nome, phone, commissionPct, status, dataNascimento } = req.body;
     const garcom = await prisma.garcom.update({
       where: { id: Number(req.params.id), tenantId: req.tenantId },
-      data: { nome, phone, commissionPct: Number(commissionPct), status },
+      data: {
+        nome, phone,
+        commissionPct: Number(commissionPct),
+        status,
+        dataNascimento: dataNascimento ? new Date(dataNascimento) : null,
+      },
       select: {
         id: true, tenantId: true, nome: true,
         username: true, phone: true,
+        dataNascimento: true,
         commissionPct: true, status: true, createdAt: true,
       },
     });
@@ -107,7 +126,7 @@ export async function remove(req, res) {
 export async function generateLogin(req, res) {
   try {
     const garcom = await prisma.garcom.findUnique({ where: { id: Number(req.params.id) } });
-    const plainPass = generatePassword(garcom.nome);
+    const plainPass = generatePassword(garcom.nome, garcom.dataNascimento);
     const hashed = await bcrypt.hash(plainPass, 10);
 
     await prisma.garcom.update({
