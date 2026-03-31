@@ -18,6 +18,7 @@ import pedidosRoutes from "./routes/food/pedidos.js";
 import garconsRoutes from "./routes/food/garcons.js";
 import caixaFoodRoutes from "./routes/food/caixa.js";
 import configFoodRoutes from "./routes/food/config.js";
+import relatoriosRoutes from "./routes/food/relatorios.js";
 
 import { authMiddleware } from "./middleware/auth.js";
 
@@ -60,6 +61,8 @@ app.use("/food/pedidos", authMiddleware, pedidosRoutes);
 app.use("/food/garcons", authMiddleware, garconsRoutes);
 app.use("/food/caixa", authMiddleware, caixaFoodRoutes);
 app.use("/food/config", authMiddleware, configFoodRoutes);
+app.use("/food/relatorios", authMiddleware, relatoriosRoutes);
+
 
 
 io.on("connection", (socket) => {

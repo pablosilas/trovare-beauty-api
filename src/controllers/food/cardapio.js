@@ -64,16 +64,18 @@ export async function listItens(req, res) {
 
 export async function createItem(req, res) {
   try {
-    const { categoriaId, nome, descricao, preco } = req.body;
+    const { categoriaId, nome, descricao, preco, temEstoque, estoque, estoqueMin } = req.body;
     const item = await prisma.item.create({
       data: {
         tenantId: req.tenantId,
         categoriaId: Number(categoriaId),
         nome,
-        descricao,
+        descricao: descricao || "",
         preco: Number(preco),
+        temEstoque: temEstoque || false,
+        estoque: temEstoque ? Number(estoque) || 0 : 0,
+        estoqueMin: temEstoque ? Number(estoqueMin) || 0 : 0,
       },
-      include: { categoria: true },
     });
     res.status(201).json(item);
   } catch (e) {
@@ -83,13 +85,21 @@ export async function createItem(req, res) {
 
 export async function updateItem(req, res) {
   try {
-    const { categoriaId, nome, descricao, preco, disponivel } = req.body;
+    const { categoriaId, nome, descricao, preco, disponivel, temEstoque, estoque, estoqueMin } = req.body;
     const item = await prisma.item.update({
       where: { id: Number(req.params.id), tenantId: req.tenantId },
-      data: { categoriaId: Number(categoriaId), nome, descricao, preco: Number(preco), disponivel },
-      include: { categoria: true },
+      data: {
+        categoriaId: Number(categoriaId),
+        nome,
+        descricao: descricao || "",
+        preco: Number(preco),
+        disponivel,
+        temEstoque: temEstoque || false,
+        estoque: temEstoque ? Number(estoque) || 0 : 0,
+        estoqueMin: temEstoque ? Number(estoqueMin) || 0 : 0,
+      },
     });
-    res.json(item);
+    res.status(200).json(item);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

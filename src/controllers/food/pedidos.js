@@ -87,6 +87,18 @@ export async function addItem(req, res) {
     const { itemId, quantidade, obs } = req.body;
     const item = await prisma.item.findUnique({ where: { id: Number(itemId) } });
 
+    if (!item) return res.status(404).json({ error: "Item não encontrado" });
+
+    // Verifica estoque
+    if (item.temEstoque) {
+      if (item.estoque <= 0) {
+        return res.status(400).json({ error: "Item sem estoque disponível" });
+      }
+      if (item.estoque < Number(quantidade)) {
+        return res.status(400).json({ error: `Estoque insuficiente. Disponível: ${item.estoque}` });
+      }
+    }
+
     await prisma.itemPedido.create({
       data: {
         pedidoId: Number(req.params.id),
@@ -95,15 +107,44 @@ export async function addItem(req, res) {
         preco: item.preco * (Number(quantidade) || 1),
         obs: obs || "",
       },
-      include: { item: true },
     });
 
-    // Recalcula total — soma itens + frete
+    // Desconta estoque se ativo
+    if (item.temEstoque) {
+      const novoEstoque = item.estoque - Number(quantidade);
+      const updates = { estoque: novoEstoque };
+
+      // Zera disponibilidade se chegou a 0
+      if (novoEstoque <= 0) {
+        updates.disponivel = false;
+        updates.estoque = 0;
+        // Emite alerta de estoque zerado
+        emitToTenant(req.tenantId, "estoque:zerado", {
+          itemId: item.id,
+          nome: item.nome,
+          estoque: 0,
+        });
+      } else if (novoEstoque <= item.estoqueMin) {
+        // Emite alerta de estoque baixo
+        emitToTenant(req.tenantId, "estoque:baixo", {
+          itemId: item.id,
+          nome: item.nome,
+          estoque: novoEstoque,
+          minimo: item.estoqueMin,
+        });
+      }
+
+      await prisma.item.update({
+        where: { id: item.id },
+        data: updates,
+      });
+    }
+
+    // Recalcula total
     const pedidoAtual = await prisma.pedido.findUnique({
       where: { id: Number(req.params.id) },
       include: { itens: true },
     });
-
     const totalItens = pedidoAtual.itens.reduce((s, i) => s + i.preco, 0);
     const total = totalItens + pedidoAtual.frete;
 

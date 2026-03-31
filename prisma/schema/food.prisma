@@ -22,17 +22,19 @@ model Categoria {
 }
 
 model Item {
-  id          Int        @id @default(autoincrement())
-  tenantId    Int
-  categoriaId Int
-  nome        String
-  descricao   String     @default("")
-  preco       Float
-  disponivel  Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  tenant      Tenant     @relation(fields: [tenantId], references: [id])
-  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
-  itensPedido ItemPedido[]
+  id           Int         @id @default(autoincrement())
+  tenantId     Int
+  categoriaId  Int
+  nome         String
+  descricao    String      @default("")
+  preco        Float
+  disponivel   Boolean     @default(true)
+  temEstoque   Boolean     @default(false)
+  estoque      Int         @default(0)
+  estoqueMin   Int         @default(0)
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  categoria    Categoria   @relation(fields: [categoriaId], references: [id])
+  itensPedido  ItemPedido[]
 }
 
 model Garcom {
