@@ -35,6 +35,8 @@ app.use(cors({
   origin: [
     "https://trovare-beauty.vercel.app",
     "https://trovare-food.vercel.app",
+    "https://trovare-waiter.vercel.app",
+    "https://trovare-kitchen.vercel.app",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",

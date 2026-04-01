@@ -366,3 +366,31 @@ export async function cancelar(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function retirar(req, res) {
+  try {
+    const pedido = await prisma.pedido.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
+    });
+
+    if (!pedido || pedido.tenantId !== req.tenantId) {
+      return res.status(404).json({ error: "Pedido não encontrado" });
+    }
+
+    if (pedido.status !== "pronto") {
+      return res.status(400).json({ error: "Pedido precisa estar pronto para ser retirado" });
+    }
+
+    const pedidoAtualizado = await prisma.pedido.update({
+      where: { id: pedido.id },
+      data: { status: "retirado" },
+      include: { mesa: true, garcom: true, itens: { include: { item: true } } },
+    });
+
+    emitToTenant(req.tenantId, "pedido:retirado", pedidoAtualizado);
+    res.json(pedidoAtualizado);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
