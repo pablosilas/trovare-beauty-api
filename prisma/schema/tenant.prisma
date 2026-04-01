@@ -5,6 +5,8 @@ model Tenant {
   product         String   @default("beauty")
   active          Boolean  @default(true)
   garcomModo      String   @default("movel") // movel | fixo
+  cancelamentoPermitido String   @default("gerente") // gerente | garcom
+  cancelamentoAteStatus String   @default("aberto")  // aberto | preparando | qualquer
   createdAt       DateTime @default(now())
   users           User[]
   barbers         Barber[]
@@ -18,6 +20,7 @@ model Tenant {
   garcons         Garcom[]
   pedidos         Pedido[]
   pedidosIfood    PedidoIfood[]
+  logsCancelamento LogCancelamento[]
 }
 
 model User {

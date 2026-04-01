@@ -254,45 +254,96 @@ export async function fechar(req, res) {
 
 export async function cancelar(req, res) {
   try {
+    const { motivo } = req.body;
+
     const pedido = await prisma.pedido.findUnique({
       where: { id: Number(req.params.id) },
-      include: { itens: { include: { item: true } } },
+      include: { itens: { include: { item: true } }, mesa: true },
     });
 
     if (!pedido || pedido.tenantId !== req.tenantId) {
       return res.status(404).json({ error: "Pedido não encontrado" });
     }
 
-    if (pedido.status === "fechado") {
-      return res.status(400).json({ error: "Pedido já fechado não pode ser cancelado" });
+    if (["fechado", "cancelado"].includes(pedido.status)) {
+      return res.status(400).json({ error: "Pedido não pode ser cancelado" });
     }
 
-    if (pedido.status === "cancelado") {
-      return res.status(400).json({ error: "Pedido já cancelado" });
+    // Verifica permissão se for garçom
+    if (req.role === "garcom") {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: req.tenantId },
+        select: { cancelamentoPermitido: true, cancelamentoAteStatus: true },
+      });
+
+      if (tenant.cancelamentoPermitido !== "garcom") {
+        return res.status(403).json({ error: "Apenas o gerente pode cancelar pedidos" });
+      }
+
+      const statusPermitidos = {
+        aberto: ["aberto"],
+        preparando: ["aberto", "preparando"],
+        qualquer: ["aberto", "preparando", "pronto", "aguardando_pagamento"],
+      };
+
+      const permitidos = statusPermitidos[tenant.cancelamentoAteStatus] || ["aberto"];
+      if (!permitidos.includes(pedido.status)) {
+        return res.status(403).json({
+          error: `Garçom só pode cancelar pedidos com status: ${permitidos.join(", ")}`,
+        });
+      }
     }
 
-    // Devolve estoque dos itens
+    // Descobre quem cancelou
+    let nomeUsuario = "Desconhecido";
+    let canceladoPor = "gerente";
+
+    if (req.garcomId) {
+      canceladoPor = "garcom";
+      const garcom = await prisma.garcom.findUnique({ where: { id: req.garcomId } });
+      nomeUsuario = garcom?.nome || "Garçom";
+    } else if (req.userId) {
+      const user = await prisma.user.findUnique({ where: { id: req.userId } });
+      nomeUsuario = user?.name || "Gerente";
+    }
+
+    // Devolve estoque
     for (const ip of pedido.itens) {
       if (ip.item?.temEstoque) {
         const novoEstoque = ip.item.estoque + ip.quantidade;
         await prisma.item.update({
           where: { id: ip.itemId },
-          data: {
-            estoque: novoEstoque,
-            disponivel: true, // reativa o item se estava indisponível
-          },
+          data: { estoque: novoEstoque, disponivel: true },
         });
       }
     }
 
-    // Cancela o pedido
+    // Cria log do cancelamento
+    await prisma.logCancelamento.create({
+      data: {
+        tenantId: req.tenantId,
+        pedidoId: pedido.id,
+        canceladoPor,
+        nomeUsuario,
+        motivo: motivo || "",
+        mesa: pedido.mesa ? `Mesa ${pedido.mesa.numero}` : pedido.nomeCliente || "Balcão",
+        total: pedido.total,
+        itens: pedido.itens.map(ip => ({
+          nome: ip.item?.nome,
+          quantidade: ip.quantidade,
+          preco: ip.preco,
+        })),
+      },
+    });
+
+    // Cancela pedido
     const pedidoCancelado = await prisma.pedido.update({
       where: { id: pedido.id },
       data: { status: "cancelado" },
       include: { mesa: true, garcom: true, itens: { include: { item: true } } },
     });
 
-    // Libera a mesa se não tiver outros pedidos ativos
+    // Libera mesa se necessário
     if (pedido.mesaId) {
       const outrosPedidos = await prisma.pedido.count({
         where: {
@@ -301,7 +352,6 @@ export async function cancelar(req, res) {
           status: { notIn: ["fechado", "cancelado"] },
         },
       });
-
       if (outrosPedidos === 0) {
         await prisma.mesa.update({
           where: { id: pedido.mesaId },

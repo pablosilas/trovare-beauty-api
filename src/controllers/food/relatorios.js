@@ -119,3 +119,22 @@ export async function alertasEstoque(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export async function logsCancelamento(req, res) {
+  try {
+    const { periodo = "dia" } = req.query;
+    const { start, end } = getRange(periodo);
+
+    const logs = await prisma.logCancelamento.findMany({
+      where: {
+        tenantId: req.tenantId,
+        createdAt: { gte: start, lte: end },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}

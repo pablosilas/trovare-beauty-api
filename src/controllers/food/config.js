@@ -46,7 +46,12 @@ export async function getConfig(req, res) {
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.tenantId },
-      select: { garcomModo: true, name: true },
+      select: {
+        garcomModo: true,
+        cancelamentoPermitido: true,
+        cancelamentoAteStatus: true,
+        name: true,
+      },
     });
     res.json(tenant);
   } catch (e) {
@@ -56,11 +61,16 @@ export async function getConfig(req, res) {
 
 export async function updateConfig(req, res) {
   try {
-    const { garcomModo } = req.body;
+    const { garcomModo, cancelamentoPermitido, cancelamentoAteStatus } = req.body;
     const tenant = await prisma.tenant.update({
       where: { id: req.tenantId },
-      data: { garcomModo },
-      select: { garcomModo: true, name: true },
+      data: { garcomModo, cancelamentoPermitido, cancelamentoAteStatus },
+      select: {
+        garcomModo: true,
+        cancelamentoPermitido: true,
+        cancelamentoAteStatus: true,
+        name: true,
+      },
     });
     res.json(tenant);
   } catch (e) {

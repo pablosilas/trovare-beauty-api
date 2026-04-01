@@ -108,3 +108,17 @@ model PedidoIfood {
   atualizadoAt DateTime @updatedAt
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
 }
+
+model LogCancelamento {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  pedidoId    Int
+  canceladoPor String  // "gerente" | "garcom"
+  nomeUsuario String   // nome do gerente ou garçom
+  motivo      String   @default("")
+  itens       Json     // snapshot dos itens no momento do cancelamento
+  mesa        String   @default("")
+  total       Float    @default(0)
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+}
